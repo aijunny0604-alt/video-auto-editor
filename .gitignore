@@ -21,8 +21,8 @@ venv/
 *.m4a
 *.aac
 
-# 모델 캐시 (Whisper 등)
-models/
+# ML 모델 캐시 (Whisper 등 — src/vae/models는 제외하지 않음)
+/models/
 *.bin
 *.pt
 
