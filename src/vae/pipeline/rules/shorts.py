@@ -5,8 +5,10 @@ from __future__ import annotations
 from vae.analyzers.audio import invert_silences
 from vae.analyzers.loudness import find_peak_windows, windows_around_peaks
 from vae.models.clip import TimeRange
+from vae.models.style import SHORTS_SUBTITLE_STYLE
 from vae.models.timeline import Segment, Timeline, Track
 from vae.pipeline.context import AnalysisContext
+from vae.utils.crop import vertical_crop_9_16
 
 
 def build_shorts_timelines(
@@ -31,6 +33,7 @@ def build_shorts_timelines(
     timelines: list[Timeline] = []
 
     for clip in ctx.clips:
+        crop = vertical_crop_9_16(clip)
         samples = (loudness_samples or {}).get(clip.path, [])
         if samples:
             peaks = find_peak_windows(samples, top_n=top_n, min_gap=target_length)
@@ -62,6 +65,7 @@ def build_shorts_timelines(
                         source_range=source_range,
                         timeline_start=cursor,
                         reason="highlight_peak" if samples else "intro_window",
+                        crop=crop,
                     )
                 )
                 cursor += r.duration
@@ -74,7 +78,11 @@ def build_shorts_timelines(
                     width=width,
                     height=height,
                     fps=clip.fps,
-                    tracks=[Track(kind="video", segments=segments)],
+                    mode="shorts",
+                    tracks=[
+                        Track(kind="video", segments=segments),
+                        Track(kind="subtitle", segments=[], subtitle_style=SHORTS_SUBTITLE_STYLE),
+                    ],
                 )
             )
 

@@ -44,11 +44,11 @@ def words_on_timeline(
 
 
 def attach_subtitle_track(timeline: Timeline, words: list[Word]) -> Timeline:
-    """Return a new Timeline with a subtitle Track carrying one segment per word.
+    """Return a new Timeline with subtitle segments populated.
 
-    Subtitle segments use timeline coordinates directly (source_range matches
-    timeline time). source is left empty (Path('')) because subtitles aren't tied
-    to a media file.
+    If the input timeline already has a subtitle Track (e.g. with a style preset
+    from vlog/shorts rule), fill that track's segments. Otherwise append a new
+    plain subtitle track.
     """
     from vae.models.clip import TimeRange
 
@@ -63,10 +63,27 @@ def attach_subtitle_track(timeline: Timeline, words: list[Word]) -> Timeline:
             )
         )
 
-    new_tracks = list(timeline.tracks) + [Track(kind="subtitle", segments=segments)]
+    new_tracks: list[Track] = []
+    filled = False
+    for track in timeline.tracks:
+        if track.kind == "subtitle" and not filled:
+            new_tracks.append(
+                Track(
+                    kind="subtitle",
+                    segments=segments,
+                    subtitle_style=track.subtitle_style,
+                )
+            )
+            filled = True
+        else:
+            new_tracks.append(track)
+    if not filled:
+        new_tracks.append(Track(kind="subtitle", segments=segments))
+
     return Timeline(
         width=timeline.width,
         height=timeline.height,
         fps=timeline.fps,
+        mode=timeline.mode,
         tracks=new_tracks,
     )

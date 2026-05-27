@@ -40,10 +40,16 @@ def write_report(
             "width": timeline.width,
             "height": timeline.height,
             "fps": timeline.fps,
+            "mode": timeline.mode,
             "duration": timeline.duration,
             "tracks": [
                 {
                     "kind": track.kind,
+                    "subtitle_style": (
+                        track.subtitle_style.model_dump()
+                        if track.subtitle_style is not None
+                        else None
+                    ),
                     "segments": [
                         {
                             "source": str(seg.source),
@@ -51,6 +57,7 @@ def write_report(
                             "timeline_start": seg.timeline_start,
                             "timeline_end": seg.timeline_end,
                             "reason": seg.reason,
+                            "crop": seg.crop.model_dump() if seg.crop is not None else None,
                         }
                         for seg in track.segments
                     ],

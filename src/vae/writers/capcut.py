@@ -26,10 +26,14 @@ def write_draft(timeline: Timeline, output_dir: Path) -> Path:
         "_format": "vae-placeholder/v0",
         "_note": "Placeholder. Real CapCut draft_content.json pending schema analysis.",
         "canvas": {"width": timeline.width, "height": timeline.height, "fps": timeline.fps},
+        "mode": timeline.mode,
         "duration_seconds": timeline.duration,
         "tracks": [
             {
                 "kind": t.kind,
+                "subtitle_style": (
+                    t.subtitle_style.model_dump() if t.subtitle_style is not None else None
+                ),
                 "segments": [
                     {
                         "source": str(s.source),
@@ -37,6 +41,7 @@ def write_draft(timeline: Timeline, output_dir: Path) -> Path:
                         "source_end": s.source_range.end,
                         "timeline_start": s.timeline_start,
                         "reason": s.reason,
+                        "crop": s.crop.model_dump() if s.crop is not None else None,
                     }
                     for s in t.segments
                 ],

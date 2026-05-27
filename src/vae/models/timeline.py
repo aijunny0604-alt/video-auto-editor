@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from vae.models.clip import TimeRange
+from vae.models.style import CropRegion, SubtitleStyle
 
 
 class Segment(BaseModel):
@@ -13,6 +14,7 @@ class Segment(BaseModel):
     source_range: TimeRange
     timeline_start: float = Field(ge=0)
     reason: str = ""
+    crop: CropRegion | None = None
 
     @property
     def timeline_end(self) -> float:
@@ -22,6 +24,7 @@ class Segment(BaseModel):
 class Track(BaseModel):
     kind: Literal["video", "audio", "subtitle"]
     segments: list[Segment] = Field(default_factory=list)
+    subtitle_style: SubtitleStyle | None = None
 
 
 class Timeline(BaseModel):
@@ -29,6 +32,7 @@ class Timeline(BaseModel):
     height: int = Field(gt=0)
     fps: float = Field(gt=0)
     tracks: list[Track] = Field(default_factory=list)
+    mode: str | None = None  # "vlog" | "shorts" — informational
 
     @property
     def duration(self) -> float:

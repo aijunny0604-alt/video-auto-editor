@@ -66,7 +66,8 @@ src/vae/
 ├─ models/                  # 데이터 모델 (pydantic)
 │   ├─ clip.py              # ClipMeta, TimeRange
 │   ├─ timeline.py          # Timeline, Track, Segment
-│   └─ subtitle.py          # Subtitle, Word
+│   ├─ subtitle.py          # Subtitle, Word
+│   └─ style.py             # SubtitleStyle, CropRegion + 프리셋  ← Phase 4 추가
 │
 ├─ writers/                 # 결과 출력
 │   ├─ capcut.py            # CapCut draft (현재 placeholder, 스키마 분석 대기)
@@ -75,7 +76,8 @@ src/vae/
 │
 └─ utils/
     ├─ ffmpeg.py            # FFmpeg 래퍼 (probe_clip, probe_duration)
-    └─ paths.py             # CapCut 경로 탐색
+    ├─ paths.py             # CapCut 경로 탐색
+    └─ crop.py              # center_crop_for_aspect, vertical_crop_9_16  ← Phase 4 추가
     # logging.py — 미구현 (현재 click.echo 사용)
 ```
 
@@ -114,24 +116,52 @@ class AnalysisContext:
     # faces, beats — 후속 Phase (Could 우선순위)
 ```
 
-### `Timeline` (최종 결정된 편집 결과)
+### `Timeline` (최종 결정된 편집 결과, **Phase 4 확장**)
 ```python
 class Segment(BaseModel):
     source: Path
     source_range: TimeRange     # 원본 클립의 어느 구간
     timeline_start: float       # 타임라인의 어느 위치에 배치
-    reason: str                 # "speech", "peak", "scene_keep" 등
+    reason: str                 # "speech", "highlight_peak", "intro_window", ...
+    crop: CropRegion | None = None        # ← Phase 4: 9:16 등 출력 비율 크롭
 
 class Track(BaseModel):
     kind: Literal["video", "audio", "subtitle"]
     segments: list[Segment]
+    subtitle_style: SubtitleStyle | None  # ← Phase 4: subtitle 트랙에만 의미
 
 class Timeline(BaseModel):
     width: int                  # 1920 (vlog) / 1080 (shorts)
     height: int                 # 1080 (vlog) / 1920 (shorts)
     fps: float
     tracks: list[Track]
+    mode: str | None            # ← Phase 4: "vlog" | "shorts" 식별자
 ```
+
+### `SubtitleStyle` / `CropRegion` (Phase 4)
+```python
+class SubtitleStyle(BaseModel):
+    font_family: str = "Noto Sans CJK KR"
+    font_size: int = 30
+    color: str = "#FFFFFF"
+    outline_color: str = "#000000"
+    outline_width: int = 2
+    anchor: Anchor = "bottom-center"       # 9-way anchor enum
+    offset_x: float = 0.0                  # normalized canvas units
+    offset_y: float = 0.05
+    emphasis_color: str | None = None      # TikTok-style 키워드 강조
+    emphasis_keywords: list[str] = []
+
+class CropRegion(BaseModel):
+    x: float                                # 0..1 정규화 (left)
+    y: float                                # 0..1 정규화 (top)
+    width: float                            # 0..1
+    height: float                           # 0..1
+```
+
+프리셋:
+- `VLOG_SUBTITLE_STYLE` — 하단 중앙, 30pt, 흰색+검정 외곽선
+- `SHORTS_SUBTITLE_STYLE` — 중앙, 60pt, `#FFD400` 키워드 강조
 
 ## 4. 모듈별 인터페이스 (Codex 위임 단위)
 
@@ -184,20 +214,20 @@ def write_draft(
 1. 입력 클립들 시간순 정렬
 2. 각 클립에서 무음 구간 제거 (단, fade in/out 0.1s 유지)
 3. 너무 짧은 세그먼트(<1s) 병합
-4. Whisper 단어 단위로 자막 트랙 생성 (하단, 30pt 흰색+검정 외곽선)
-5. 씬 경계에서 미세 컷 정리
+4. Whisper 단어 단위로 자막 트랙 생성 (스타일: VLOG_SUBTITLE_STYLE 프리셋)
+5. 씬 경계에서 미세 컷 정리 (scene analyzer가 vlog mode에서 자동 호출)
 6. 비율: 16:9 유지 (원본 그대로)
 ```
 
 ### `rules/shorts.py`
 ```
-1. 입력 클립에서 volume_peak + speech_density 높은 60s 구간 N개 추출
+1. 입력 클립에서 loudness 피크 N개 추출 (피크 없으면 intro_window 폴백)
 2. 각 후보별로:
-   - 9:16 크롭 (얼굴 트래킹 기반, 못 찾으면 중앙)
-   - 무음 공격적 제거 (0.2s 이상)
-   - 자막: 단어 단위 등장, 중앙 배치, 60pt, 강조 키워드 노란색
-   - BGM 비트가 있으면 비트마다 컷 전환
-3. 후보 N개를 각각 별도 draft로 출력
+   - 9:16 중앙 크롭 (vertical_crop_9_16 — face tracking은 C3 Could로 후속)
+   - 무음 공격적 제거 (pad=0.05)
+   - 자막: 단어 단위 등장 (스타일: SHORTS_SUBTITLE_STYLE 프리셋)
+   - BGM 비트가 있으면 비트마다 컷 전환 (C1 Could)
+3. 후보 N개를 각각 별도 timeline으로 출력
 ```
 
 ## 6. CapCut Draft 스키마 전략

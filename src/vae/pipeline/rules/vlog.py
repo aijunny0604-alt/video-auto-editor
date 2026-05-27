@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from vae.analyzers.audio import invert_silences
 from vae.models.clip import TimeRange
+from vae.models.style import VLOG_SUBTITLE_STYLE
 from vae.models.timeline import Segment, Timeline, Track
 from vae.pipeline.context import AnalysisContext
 
@@ -47,7 +48,11 @@ def build_vlog_timeline(
         width=width,
         height=height,
         fps=fps,
-        tracks=[Track(kind="video", segments=video_segments)],
+        mode="vlog",
+        tracks=[
+            Track(kind="video", segments=video_segments),
+            Track(kind="subtitle", segments=[], subtitle_style=VLOG_SUBTITLE_STYLE),
+        ],
     )
 
 
