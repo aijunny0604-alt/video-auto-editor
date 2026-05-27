@@ -48,6 +48,9 @@ class JobRequest(BaseModel):
     shorts_count: int = 3
     shorts_length: float = 30.0
     use_stt: bool = False
+    render: bool = True
+    bgm_volume: float = 0.18
+    transition: str = "fade"
 
 
 class JobResponse(BaseModel):
@@ -156,6 +159,9 @@ def create_job(req: JobRequest) -> JobResponse:
             shorts_count=req.shorts_count,
             shorts_length=req.shorts_length,
             use_stt=req.use_stt,
+            render=req.render,
+            bgm_volume=req.bgm_volume,
+            transition=req.transition,
         )
     except (ValueError, FileNotFoundError) as exc:
         raise HTTPException(400, str(exc)) from exc

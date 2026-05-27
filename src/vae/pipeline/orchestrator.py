@@ -24,9 +24,13 @@ TranscribeFn = Callable[[Path], list[Word]]
 
 
 def collect_clips(input_dir: Path) -> list[Path]:
-    """Return sorted list of supported video/audio files in input_dir."""
-    exts = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".wav", ".mp3", ".m4a"}
-    return sorted(p for p in input_dir.iterdir() if p.is_file() and p.suffix.lower() in exts)
+    """Return sorted list of video files in input_dir.
+
+    Pure-audio files are excluded here (they're used as optional BGM, see
+    vae.utils.bgm). Use this only for inputs that should become timelines.
+    """
+    video_exts = {".mp4", ".mov", ".mkv", ".avi", ".webm"}
+    return sorted(p for p in input_dir.iterdir() if p.is_file() and p.suffix.lower() in video_exts)
 
 
 def analyze(

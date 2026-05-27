@@ -22,6 +22,9 @@ export default function JobForm({ onCreated }: Props) {
   const [shortsCount, setShortsCount] = useState(3);
   const [shortsLength, setShortsLength] = useState(30);
   const [useStt, setUseStt] = useState(false);
+  const [autoRender, setAutoRender] = useState(true);
+  const [transition, setTransition] = useState<"fade" | "none">("fade");
+  const [bgmVolume, setBgmVolume] = useState(0.18);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +44,9 @@ export default function JobForm({ onCreated }: Props) {
         shorts_count: shortsCount,
         shorts_length: shortsLength,
         use_stt: useStt,
+        render: autoRender,
+        bgm_volume: bgmVolume,
+        transition,
       };
       const job = await createJob(req);
       onCreated(job);
@@ -122,6 +128,57 @@ export default function JobForm({ onCreated }: Props) {
           />
           Whisper STT 자막 생성 (느림, GPU 권장)
         </label>
+
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-neutral-300">
+          <input
+            type="checkbox"
+            checked={autoRender}
+            onChange={(e) => setAutoRender(e.target.checked)}
+            className="h-4 w-4 accent-emerald-500"
+          />
+          🎬 완성된 mp4 자동 렌더 (FFmpeg)
+        </label>
+
+        {autoRender && (
+          <div className="space-y-2 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
+            <div>
+              <label className="mb-1 block text-xs text-neutral-400">장면 전환</label>
+              <div className="flex gap-1.5">
+                {(["fade", "none"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTransition(t)}
+                    className={`flex-1 rounded px-2 py-1 text-xs ${
+                      transition === t
+                        ? "bg-emerald-500 text-black"
+                        : "bg-neutral-800 text-neutral-300"
+                    }`}
+                  >
+                    {t === "fade" ? "✨ 페이드" : "🪓 컷"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-neutral-400">
+                BGM 볼륨 ({Math.round(bgmVolume * 100)}%)
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.02}
+                value={bgmVolume}
+                onChange={(e) => setBgmVolume(Number(e.target.value))}
+                className="w-full accent-emerald-500"
+              />
+              <p className="text-xs text-neutral-500">
+                입력 폴더에 mp3/wav 파일이 있으면 자동 BGM. 없으면 무시됨.
+              </p>
+            </div>
+          </div>
+        )}
 
         {source && (
           <div className="rounded-md bg-neutral-950/60 px-3 py-2 text-xs">

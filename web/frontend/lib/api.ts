@@ -30,6 +30,9 @@ export type CreateJobRequest = {
   shorts_count?: number;
   shorts_length?: number;
   use_stt?: boolean;
+  render?: boolean;
+  bgm_volume?: number;
+  transition?: "fade" | "none";
 };
 
 export async function createJob(req: CreateJobRequest): Promise<JobSummary> {
