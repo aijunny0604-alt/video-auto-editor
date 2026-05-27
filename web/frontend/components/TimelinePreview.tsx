@@ -31,7 +31,12 @@ const REASON_COLOR: Record<string, string> = {
   intro_window: "bg-amber-500",
 };
 
-export default function TimelinePreview({ report }: { report: Report | null }) {
+type TimelineProps = {
+  report: Report | null;
+  onSegmentClick?: (sourceTime: number) => void;
+};
+
+export default function TimelinePreview({ report, onSegmentClick }: TimelineProps) {
   if (!report) {
     return (
       <div className="rounded-xl border border-dashed border-neutral-800 bg-neutral-900/30 p-6 text-center text-sm text-neutral-500">
@@ -62,11 +67,18 @@ export default function TimelinePreview({ report }: { report: Report | null }) {
                 const left = (seg.timeline_start / totalDuration) * 100;
                 const width = ((seg.timeline_end - seg.timeline_start) / totalDuration) * 100;
                 const color = REASON_COLOR[seg.reason] ?? "bg-neutral-600";
+                const clickable = !!onSegmentClick && track.kind === "video";
                 return (
-                  <div
+                  <button
                     key={si}
-                    title={`${seg.reason} · ${seg.source_range[0].toFixed(2)}→${seg.source_range[1].toFixed(2)}s`}
-                    className={`absolute top-0 h-full border-r border-neutral-950 ${color} opacity-80 hover:opacity-100`}
+                    type="button"
+                    onClick={
+                      clickable
+                        ? () => onSegmentClick?.(seg.source_range[0])
+                        : undefined
+                    }
+                    title={`${seg.reason} · 원본 ${seg.source_range[0].toFixed(2)}→${seg.source_range[1].toFixed(2)}s${clickable ? " · 클릭하면 원본 재생" : ""}`}
+                    className={`absolute top-0 h-full border-r border-neutral-950 ${color} opacity-80 transition hover:opacity-100 ${clickable ? "cursor-pointer hover:ring-2 hover:ring-white" : ""}`}
                     style={{ left: `${left}%`, width: `${Math.max(width, 0.5)}%` }}
                   />
                 );

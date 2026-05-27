@@ -1,20 +1,49 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import HowToUse from "@/components/HowToUse";
 import JobForm from "@/components/JobForm";
 import LogStream from "@/components/LogStream";
 import Metrics from "@/components/Metrics";
 import ProgressBar from "@/components/ProgressBar";
 import TimelinePreview from "@/components/TimelinePreview";
+import VideoPlayer, { type VideoPlayerHandle, type VideoTab } from "@/components/VideoPlayer";
 import type { JobSummary, PipelineEvent } from "@/lib/api";
 import { getArtifact, openJobWebSocket } from "@/lib/api";
 import { IS_DEMO, loadDemoJob, loadDemoReport, replayEvents, summary } from "@/lib/demo";
+
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+const DEMO_VIDEO_TABS: VideoTab[] = [
+  {
+    key: "original",
+    label: "🎬 원본 (16:9)",
+    src: `${BASE}/demo/original.mp4`,
+    ratio: "16-9",
+    caption: "vlog_demo.mp4 · 1280×720 · 20초",
+  },
+  {
+    key: "shorts1",
+    label: "⚡ Shorts #1",
+    src: `${BASE}/demo/shorts_01.mp4`,
+    ratio: "9-16",
+    caption: "highlight_peak · 0.75s→5.75s · 1080×1920 자동 크롭",
+  },
+  {
+    key: "shorts2",
+    label: "⚡ Shorts #2",
+    src: `${BASE}/demo/shorts_02.mp4`,
+    ratio: "9-16",
+    caption: "highlight_peak · 9.95s→12.97s · 1080×1920 자동 크롭",
+  },
+];
 
 export default function Home() {
   const [job, setJob] = useState<JobSummary | null>(null);
   const [events, setEvents] = useState<PipelineEvent[]>([]);
   const [report, setReport] = useState<unknown | null>(null);
   const [connected, setConnected] = useState(false);
+  const playerRef = useRef<VideoPlayerHandle>(null);
 
   // Live mode: connect WebSocket
   useEffect(() => {
@@ -173,12 +202,25 @@ export default function Home() {
 
           <Metrics events={events} />
 
+          {IS_DEMO && (
+            <VideoPlayer ref={playerRef} tabs={DEMO_VIDEO_TABS} />
+          )}
+
           <div className="grid gap-4 xl:grid-cols-2">
             <LogStream events={events} />
-            <TimelinePreview report={report as any} />
+            <TimelinePreview
+              report={report as any}
+              onSegmentClick={
+                IS_DEMO
+                  ? (t) => playerRef.current?.jumpToOriginal(t)
+                  : undefined
+              }
+            />
           </div>
         </section>
       </div>
+
+      {IS_DEMO && <HowToUse />}
 
       <footer className="pt-6 text-center text-xs text-neutral-600">
         FastAPI :8000 · Next.js :3000 · 같은 머신 로컬 실행 권장
