@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 영상/오디오 원본 (대용량, 절대 커밋 금지)
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.wmv
+*.webm
+*.mp3
+*.wav
+*.flac
+*.m4a
+*.aac
+
+# 모델 캐시 (Whisper 등)
+models/
+*.bin
+*.pt
+
+# 작업 결과물
+out/
+output/
+samples/
+clips/
+input/
+
+# CapCut draft 샘플 (개인 경로 포함 가능)
+capcut_samples/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

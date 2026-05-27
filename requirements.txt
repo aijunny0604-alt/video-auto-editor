@@ -1,0 +1,19 @@
+# 영상/오디오 처리
+ffmpeg-python>=0.2.0
+pyscenedetect[opencv]>=0.6.3
+librosa>=0.10.1
+soundfile>=0.12.1
+
+# STT (CUDA: torch 따로 설치 필요)
+openai-whisper>=20231117
+faster-whisper>=1.0.0  # CUDA 가속 더 빠름, large-v3 권장
+
+# 비전
+opencv-python>=4.9.0
+mediapipe>=0.10.9
+
+# 유틸
+numpy>=1.26
+tqdm>=4.66
+click>=8.1
+pydantic>=2.5

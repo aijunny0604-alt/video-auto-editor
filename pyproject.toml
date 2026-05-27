@@ -1,0 +1,12 @@
+[project]
+name = "video-auto-editor"
+version = "0.0.1"
+description = "Auto cut-editing pipeline for vlogs and shorts, exporting CapCut draft projects."
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
