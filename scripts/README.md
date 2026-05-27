@@ -45,6 +45,24 @@ scripts\stop-editor.bat
 pwsh -ExecutionPolicy Bypass -File scripts\open-editor.ps1
 ```
 
+## 파일 목록
+
+| 파일 | 역할 |
+|------|------|
+| `setup.bat` | 최초 1회 — Python venv + pip + npm install |
+| `create-desktop-shortcut.bat` | 최초 1회 — 바탕화면 `.lnk` 생성 |
+| `open-editor.bat` | **매번 사용** — 포트 정리 → 두 서버 → 브라우저 |
+| `_run-backend.bat` | (내부) FastAPI uvicorn 실행. 직접 더블클릭 금지 |
+| `_run-frontend.bat` | (내부) Next.js `npm run dev` 실행. 직접 더블클릭 금지 |
+| `stop-editor.bat` | 두 서버 종료 (포트 + 명명된 cmd 창) |
+| `open-editor.ps1` | PowerShell 대안 |
+
+## 동작 원리
+
+`open-editor.bat` 은 중첩 따옴표 이슈를 피하려고 두 서버를 **별도 헬퍼 `.bat`**
+으로 분리해 `start "title" "helper.bat"` 형태로만 실행합니다. 그래서 경로에
+공백/특수문자가 있어도 안전합니다.
+
 ## 트러블슈팅
 
 | 증상 | 원인 / 해결 |
