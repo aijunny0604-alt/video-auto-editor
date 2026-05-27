@@ -51,6 +51,20 @@ export async function listFolder(path: string): Promise<{ path: string; files: {
   return res.json();
 }
 
+export type UploadResult = {
+  upload_id: string;
+  input_dir: string;
+  files: { name: string; size: number }[];
+};
+
+export async function uploadFiles(files: File[]): Promise<UploadResult> {
+  const form = new FormData();
+  files.forEach((f) => form.append("files", f, f.name));
+  const res = await fetch("/api/uploads", { method: "POST", body: form });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function getJob(id: string): Promise<JobDetail> {
   const res = await fetch(`/api/jobs/${id}`);
   if (!res.ok) throw new Error(await res.text());

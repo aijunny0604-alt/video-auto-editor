@@ -4,14 +4,22 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
+import tempfile
+import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from vae.utils.paths import list_capcut_projects
 from web.backend.jobs import Job, manager
+
+UPLOAD_ROOT = Path(tempfile.gettempdir()) / "vae_uploads"
+UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+SUPPORTED_EXTS = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".wav", ".mp3", ".m4a"}
+MAX_FILE_BYTES = 500 * 1024 * 1024  # 500MB per file
 
 app = FastAPI(title="video-auto-editor GUI", version="0.1.0")
 
@@ -78,6 +86,46 @@ def health() -> dict[str, str]:
 @app.get("/api/capcut/projects")
 def capcut_projects() -> dict[str, list[str]]:
     return {"projects": [str(p) for p in list_capcut_projects()]}
+
+
+@app.post("/api/uploads")
+async def upload_files(files: list[UploadFile] = File(...)) -> dict:
+    """Receive uploaded media files and stash them in a unique upload folder.
+
+    Returns the absolute path of the created folder so it can be reused as
+    `input_dir` when creating a job.
+    """
+    if not files:
+        raise HTTPException(400, "no files provided")
+
+    upload_id = uuid.uuid4().hex[:12]
+    target_dir = UPLOAD_ROOT / upload_id
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    saved: list[dict] = []
+    for f in files:
+        # Sanitize: strip directory components, keep the basename
+        raw_name = Path(f.filename or "upload.bin").name
+        ext = Path(raw_name).suffix.lower()
+        if ext not in SUPPORTED_EXTS:
+            continue
+        dest = target_dir / raw_name
+        size = 0
+        with dest.open("wb") as out:
+            while chunk := await f.read(1024 * 1024):
+                size += len(chunk)
+                if size > MAX_FILE_BYTES:
+                    out.close()
+                    dest.unlink(missing_ok=True)
+                    raise HTTPException(413, f"{raw_name} exceeds {MAX_FILE_BYTES // (1024*1024)}MB")
+                out.write(chunk)
+        saved.append({"name": raw_name, "size": size})
+
+    if not saved:
+        shutil.rmtree(target_dir, ignore_errors=True)
+        raise HTTPException(400, "no supported media files in upload")
+
+    return {"upload_id": upload_id, "input_dir": str(target_dir), "files": saved}
 
 
 @app.get("/api/folders/list")
