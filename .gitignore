@@ -36,6 +36,13 @@ input/
 # CapCut draft 샘플 (개인 경로 포함 가능)
 capcut_samples/
 
+# Node / Next.js (web/frontend)
+node_modules/
+.next/
+out-web/
+*.tsbuildinfo
+next-env.d.ts
+
 # OS / IDE
 .DS_Store
 Thumbs.db
