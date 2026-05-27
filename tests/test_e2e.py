@@ -81,7 +81,9 @@ def test_analyze_populates_silences(synthetic_video_dir: Path):
 
 @requires_ffmpeg
 def test_run_pipeline_vlog_builds_timeline(synthetic_video_dir: Path):
-    ctx, timeline = run_pipeline("vlog", synthetic_video_dir)
+    ctx, timelines = run_pipeline("vlog", synthetic_video_dir)
+    assert len(timelines) == 1
+    timeline = timelines[0]
     assert timeline.width == 1920
     assert timeline.height == 1080
     # 3 tones kept (~1s each) after silence removal + padding overlap merging
@@ -91,8 +93,21 @@ def test_run_pipeline_vlog_builds_timeline(synthetic_video_dir: Path):
 
 
 @requires_ffmpeg
+def test_run_pipeline_shorts_returns_vertical_timeline(synthetic_video_dir: Path):
+    ctx, timelines = run_pipeline(
+        "shorts", synthetic_video_dir, shorts_count=2, shorts_length=4.0
+    )
+    assert len(timelines) >= 1
+    for tl in timelines:
+        assert tl.width == 1080
+        assert tl.height == 1920
+        assert tl.duration > 0
+
+
+@requires_ffmpeg
 def test_writers_emit_files(synthetic_video_dir: Path, tmp_path: Path):
-    ctx, timeline = run_pipeline("vlog", synthetic_video_dir)
+    ctx, timelines = run_pipeline("vlog", synthetic_video_dir)
+    timeline = timelines[0]
     out = tmp_path / "out"
 
     report = write_report(ctx, timeline, out / "analysis_report.json")

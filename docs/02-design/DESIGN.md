@@ -45,13 +45,13 @@
 ```
 src/vae/
 ├─ __init__.py
-├─ __main__.py              # CLI entry (click)
-├─ cli.py                   # 서브커맨드 (run, analyze, inspect-draft)
+├─ __main__.py              # CLI entry (click) — implemented inline (no separate cli.py)
 │
 ├─ pipeline/
 │   ├─ __init__.py
 │   ├─ orchestrator.py      # 모드별 파이프라인 실행
 │   ├─ context.py           # AnalysisContext (dataclass)
+│   ├─ subtitles.py         # words_on_timeline / attach_subtitle_track  ← Phase 3 추가
 │   └─ rules/
 │       ├─ vlog.py          # 브이로그 의사결정 룰
 │       └─ shorts.py        # 숏폼 의사결정 룰
@@ -60,8 +60,8 @@ src/vae/
 │   ├─ audio.py             # FFmpeg silencedetect
 │   ├─ stt.py               # faster-whisper
 │   ├─ scene.py             # PySceneDetect
-│   ├─ motion.py            # OpenCV optical flow
-│   └─ faces.py             # MediaPipe face mesh
+│   └─ loudness.py          # FFmpeg astats RMS  ← Phase 3 추가 (librosa 대체)
+│   # motion.py, faces.py  — Could 우선순위, 후속 Phase
 │
 ├─ models/                  # 데이터 모델 (pydantic)
 │   ├─ clip.py              # ClipMeta, TimeRange
@@ -69,14 +69,14 @@ src/vae/
 │   └─ subtitle.py          # Subtitle, Word
 │
 ├─ writers/                 # 결과 출력
-│   ├─ capcut.py            # CapCut draft_content.json 생성
+│   ├─ capcut.py            # CapCut draft (현재 placeholder, 스키마 분석 대기)
 │   ├─ srt.py               # .srt 파일
 │   └─ report.py            # analysis_report.json
 │
 └─ utils/
-    ├─ ffmpeg.py            # FFmpeg 래퍼
-    ├─ paths.py             # CapCut 경로 탐색
-    └─ logging.py           # 구조화 로깅
+    ├─ ffmpeg.py            # FFmpeg 래퍼 (probe_clip, probe_duration)
+    └─ paths.py             # CapCut 경로 탐색
+    # logging.py — 미구현 (현재 click.echo 사용)
 ```
 
 ## 3. 핵심 데이터 모델
@@ -102,17 +102,16 @@ class TimeRange(BaseModel):
     def duration(self) -> float: return self.end - self.start
 ```
 
-### `AnalysisContext` (분석 결과 모음)
+### `AnalysisContext` (분석 결과 모음, **Phase 3 동기화**)
 ```python
 @dataclass
 class AnalysisContext:
     clips: list[ClipMeta]
-    silences: dict[Path, list[TimeRange]]       # 클립별 무음 구간
-    speech_segments: dict[Path, list[Word]]     # STT 단어 + 타임스탬프
-    scenes: dict[Path, list[TimeRange]]         # 씬 경계
-    peaks: dict[Path, list[float]]              # 볼륨 피크 시각
-    faces: dict[Path, list[FaceTrack]]          # 얼굴 트래킹
-    beats: list[float] | None                   # BGM 비트 (shorts 모드)
+    silences: dict[Path, list[TimeRange]]                  # 무음 구간
+    speech_words: dict[Path, list[Word]]                   # STT 단어 (← speech_segments에서 rename)
+    scenes: dict[Path, list[TimeRange]]                    # 씬 경계 (vlog mode 시 populated)
+    loudness: dict[Path, list[tuple[float, float]]]        # (time, rms_db) (← peaks 대체, librosa 미사용)
+    # faces, beats — 후속 Phase (Could 우선순위)
 ```
 
 ### `Timeline` (최종 결정된 편집 결과)

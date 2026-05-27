@@ -42,12 +42,26 @@ def cli() -> None:
     default="large-v3",
     help="Whisper model size (tiny/base/small/medium/large-v3).",
 )
+@click.option(
+    "--shorts-count",
+    default=3,
+    show_default=True,
+    help="Number of shorts to extract per clip (shorts mode only).",
+)
+@click.option(
+    "--shorts-length",
+    default=30.0,
+    show_default=True,
+    help="Target length of each short in seconds.",
+)
 def run(
     mode: str,
     input_dir: Path,
     output_dir: Path,
     stt: bool,
     whisper_model: str,
+    shorts_count: int,
+    shorts_length: float,
 ) -> None:
     """Run the auto-edit pipeline over a folder of clips."""
     transcribe_fn = None
@@ -58,21 +72,29 @@ def run(
             return _transcribe(p, model_size=whisper_model)
 
     click.echo(f"[vae] mode={mode}  input={input_dir}  output={output_dir}")
-    ctx, timeline = run_pipeline(mode, input_dir, transcribe_fn=transcribe_fn)
+    ctx, timelines = run_pipeline(
+        mode,
+        input_dir,
+        transcribe_fn=transcribe_fn,
+        shorts_count=shorts_count,
+        shorts_length=shorts_length,
+    )
     click.echo(f"[vae] analyzed {len(ctx.clips)} clip(s)")
-    click.echo(f"[vae] timeline duration: {timeline.duration:.2f}s")
+    click.echo(f"[vae] produced {len(timelines)} timeline(s)")
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    report_path = write_report(ctx, timeline, output_dir / "analysis_report.json")
-    draft_path = write_draft(timeline, output_dir / "capcut_project")
-    click.echo(f"[vae] wrote {report_path.relative_to(output_dir)}")
-    click.echo(f"[vae] wrote {draft_path.relative_to(output_dir)}")
+    for i, tl in enumerate(timelines, start=1):
+        suffix = "" if len(timelines) == 1 else f"_{i:02d}"
+        report_path = write_report(ctx, tl, output_dir / f"analysis_report{suffix}.json")
+        draft_path = write_draft(tl, output_dir / f"capcut_project{suffix}")
+        click.echo(f"[vae] #{i} duration={tl.duration:.2f}s  -> {draft_path.name}/")
+        click.echo(f"[vae]      {report_path.name}")
 
     if stt:
         subs_by_clip = {p: words_to_subtitles(w) for p, w in ctx.speech_words.items()}
         all_subs = [s for subs in subs_by_clip.values() for s in subs]
         srt_path = write_srt(all_subs, output_dir / "subtitles.srt")
-        click.echo(f"[vae] wrote {srt_path.relative_to(output_dir)}  ({len(all_subs)} subs)")
+        click.echo(f"[vae] wrote {srt_path.name}  ({len(all_subs)} subs)")
 
 
 @cli.command("inspect-draft")
