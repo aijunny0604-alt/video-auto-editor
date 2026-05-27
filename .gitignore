@@ -21,6 +21,9 @@ venv/
 *.m4a
 *.aac
 
+# 예외: GitHub Pages 데모용 영상은 커밋 허용
+!web/frontend/public/demo/*.mp4
+
 # ML 모델 캐시 (Whisper 등 — src/vae/models는 제외하지 않음)
 /models/
 *.bin
